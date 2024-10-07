@@ -17,8 +17,8 @@ ModelBlock.py => Model을 구성하는 블럭 -> nblock
 '''
 
 # numpy data path
-data_path = 'C:/Users/ECG/Dataset/training_9s.npy'
-label_path = 'C:/Users/ECG/Dataset/training_9s_label.npy'
+data_path = 'C:/Users/LJY/Desktop/ECG/Dataset/training_9s.npy'
+label_path = 'C:/Users/LJY/Desktop/ECG/Dataset/training_9s_label.npy'
 learning_late = 0.0001
 
 
@@ -100,42 +100,60 @@ class MuDANet(nn.Module):
         self.fc3 = mblock.DenseBlock(1024, 256, dropout=0.0)
 
         # 8. output (input_dim, output_dim)
-        self.fc4 = mblock.DenseBlock(128, num_classes, dropout=0.0)
+        self.fc4 = mblock.DenseBlock(256, num_classes, dropout=0.0)
 
     def forward(self, x):
         # Stream-1
             # CNNBlock-1
         x1 = self.cnn_block1_stream1(x)
+        print('cnn1: ' + str(str(x1.shape)))
         x1 = self.se_block1_stream1(x1)
-
+        print('se1: ' + str(str(x1.shape)))
         x1 = self.cnn_block2_stream1(x1)
+        print('cnn2: ' + str(str(x1.shape)))
         x1 = self.se_block2_stream1(x1)
-
+        print('se2: ' + str(x1.shape))
         x1 = self.cnn_block3_stream1(x1)
+        print('cnn3: ' + str(x1.shape))
         x1 = self.se_block3_stream1(x1)
+        print('se3: ' + str(x1.shape))
 
         x1 = torch.flatten(x1, start_dim=1)
+        print('flatten1: ' + str(x1.shape))
         x1 = self.dense_block1_stream1(x1)
+        print('dnn1: ' + str(x1.shape))
         x1 = self.dense_block2_stream1(x1)
+        print('dnn2: ' + str(x1.shape))
         x1 = self.dense_block3_stream1(x1)
+        print('dnn3: ' + str(x1.shape))
 
             # CNNBlock-2
         x1 = x1.view(x1.size(0), 1, -1)
+        print('reshape1: ' + str(x1.shape))
         x1 = self.cnn_block4_stream1(x1)
+        print('cnn4: ' + str(x1.shape))
         x1 = self.se_block4_stream1(x1)
-
+        print('se4: ' + str(x1.shape))
         x1 = self.cnn_block5_stream1(x1)
+        print('cnn5: ' + str(x1.shape))
         x1 = self.se_block5_stream1(x1)
-
+        print('se5: ' + str(x1.shape))
         x1 = self.cnn_block6_stream1(x1)
+        print('cnn6: ' + str(x1.shape))
         x1 = self.se_block6_stream1(x1)
+        print('se6: ' + str(x1.shape))
 
         x1 = torch.flatten(x1, start_dim=1)
+        print('flatten2: ' + str(x1.shape))
         x1 = self.dense_block4_stream1(x1)
+        print('dnn4: ' + str(x1.shape))
         x1 = self.dense_block5_stream1(x1)
+        print('dnn5: ' + str(x1.shape))
         x1 = self.dense_block6_stream1(x1)
+        print('dnn6: ' + str(x1.shape))
             # AttentionBlock
         x1 = self.attention_block_stream1(x1)
+        print('attention: ' + str(x1.shape))
 
 
         # Stream-2
@@ -174,27 +192,32 @@ class MuDANet(nn.Module):
 
         # model_add
         x_fused = torch.add(x1, x2)
-
+        print('fused model: ' + str(x_fused.shape))
         x_fused = torch.flatten(x_fused, start_dim=1)
+        print('flatten_fused1: ' + str(x_fused.shape))
         x_fused = x_fused.view(x_fused.size(0), 1, -1)
+        print('reshape_fused1: ' + str(x_fused.shape))
 
         # Bi-LSTM-Stream-1
         x_fused1 = self.bilstm1_block(x_fused)
-
+        print('biLstm_fused1: ' + str(x_fused1.shape))
         # Bi-LSTM-Stream-2
         x_fused2 = self.bilstm2_block(x_fused)
 
         # model_add
         x_fused = torch.add(x_fused1, x_fused2)
-
+        print('fused: ' + str(x_fused.shape))
         # Fully_Connected
         x_fused = F.relu(self.fc1(x_fused))
+        print('fc1: ' + str(x_fused.shape))
         x_fused = F.relu(self.fc2(x_fused))
+        print('fc2: ' + str(x_fused.shape))
         x_fused = F.relu(self.fc3(x_fused))
+        print('fc3: ' + str(x_fused.shape))
 
         # Output
         x_fused = self.fc4(x_fused)
-
+        print('output: ' + str(x_fused.shape))
         return x_fused
 
 

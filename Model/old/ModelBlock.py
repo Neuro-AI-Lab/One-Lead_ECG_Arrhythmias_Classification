@@ -7,16 +7,57 @@ class CNNBlock(nn.Module):
     def __init__(self, in_layer, out_layer, kernel_size, stride):
         super(CNNBlock, self).__init__()
         # Loss를 줄이기위해 BatchNorm1d를 사용함
-        self.conv1 = nn.Conv1d(in_layer, out_layer, kernel_size=kernel_size, stride=stride, bias=True)
-        self.bn = nn.BatchNorm1d(out_layer)
-        self.relu = nn.ReLU()
+        self.conv1 = nn.Conv1d(in_layer, out_layer, kernel_size=kernel_size, stride=stride, padding='valid')
 
     def forward(self, x):
         x = self.conv1(x)
-        x = self.bn(x)
-        out = self.relu(x)
-        return out
 
+        return x
+
+class SEBlock(nn.Module):
+    def __init__(self, in_channels, reduction=16):
+        super(SEBlock, self).__init__()
+
+        self.GAP = nn.AdaptiveAvgPool1d(1)
+        self.fc1 = nn.Linear(in_channels, in_channels // reduction)
+        self.fc2 = nn.Linear(in_channels // reduction, in_channels)
+
+    def forward(self, x):
+        batch_size, num_channels, H = x.size()
+
+        # squeeze_x = self.GAP(x).view(batch_size, num_channels)
+        squeeze_x = self.GAP(x)
+        squeeze_x = squeeze_x.squeeze(dim=2)
+        # print('squeeze_shape: ', squeeze_x.shape)
+
+        squeeze_x = F.relu(self.fc1(squeeze_x))
+        squeeze_x = F.sigmoid(self.fc2(squeeze_x))
+        squeeze_x = squeeze_x.unsqueeze(dim=2)
+        # print('last shape: ', squeeze_x.shape)
+
+        return x * squeeze_x
+
+
+# class SEBlock(nn.Module):
+#     def __init__(self, in_channels, reduction=16):
+#         super(SEBlock, self).__init__()
+#
+#         self.GAP = nn.AdaptiveAvgPool1d(1)
+#         self.fc1 = nn.Linear(in_channels, in_channels // reduction)
+#         self.fc2 = nn.Linear(in_channels // reduction, in_channels)
+#
+#     def forward(self, x):
+#         batch_size, num_channels, H = x.size()
+#
+#         squeeze_x = self.GAP(x).view(batch_size, num_channels)
+#
+#         squeeze_x = F.relu(self.fc1(squeeze_x))
+#         squeeze_x = F.sigmoid(self.fc2(squeeze_x))
+#
+#
+#         return x * squeeze_x.view(batch_size, num_channels, 1)
+
+'''
 class SEBlock(nn.Module):
     def __init__(self, in_layer, out_layer):
         super(SEBlock, self).__init__()
@@ -32,7 +73,7 @@ class SEBlock(nn.Module):
         x_squeeze = self.conv2(x_squeeze)
         x_squeeze = F.sigmoid(x_squeeze)
         return torch.add(x, x_squeeze)
-
+'''
 # AttentionBlock Dense(384, 768)과 input_dim용 dense까지 3개를 사용하였다.
 class AttentionBlock(nn.Module):
     def __init__(self, input_dim, output_dim):
@@ -45,12 +86,13 @@ class AttentionBlock(nn.Module):
 
     def forward(self, x):
         attention = self.fc1(x)
-        attention = F.relu(attention)
         attention = self.fc2(attention)
-        attention = F.relu(attention)
-        attention = self.fc3(attention)
+        # attention = self.fc3(attention)
         attention = self.softmax(attention)
-        return torch.mul(attention, x)
+        print('x transposed shape: ', x.T.shape)
+        print('attention shape: ', attention.shape)
+        K = x.T.matmul(attention)
+        return K
 
 
 class BiLSTMBlock(nn.Module):

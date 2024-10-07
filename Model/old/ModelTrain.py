@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import  Dataset
+from sklearn.model_selection import KFold
+from sklearn.metrics import accuracy_score
+import numpy as np
 
 # 모델 학습시키는 코드
 def train_model(model, train_loader, val_loader, criterion, optimizer, num_epochs=30, device='cuda'):
